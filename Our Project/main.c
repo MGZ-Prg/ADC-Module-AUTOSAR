@@ -8,39 +8,49 @@
 #include <stdlib.h>
 #include <string.h>
 
-void test()
-{
-	GPIO_writePin(PORTF,PIN1,HIGH);
-}
+extern AdcChannelGroup ArrayOfAdcChannelGroups[MAX_NB_GROUPS];
+
+extern volatile Adc_ValueGroupType adcResult[MAX_NB_GROUPS][MAX_NB_CHANNELS][MAX_NB_OF_SAMPLES_PER_CHANNEL];
+
+extern volatile Adc_ValueGroupType resultBuffer[MAX_NB_GROUPS][8*3];
+
 
 int main()
-{
-	TIMER_initAdc(100);
-	//TIMER_initInterrupt(5,test);
-
+{	
+	GPIO_initPin(PORTD,PIN2,ANALOG,PERIPHERAL);
+	GPIO_initPin(PORTE,PIN1,ANALOG,PERIPHERAL);
 	GPIO_initPin(PORTE,PIN3,ANALOG,PERIPHERAL);
+		
+	Adc_init(ArrayOfAdcChannelGroups[0]);
+	Adc_init(ArrayOfAdcChannelGroups[1]);
 	
-	AdcChannel AdcChannel = {ADC0,SS3,PE3};
+	UART_init(UART1,UART_BAUD_9600);
 	
-	Adc_init(AdcChannel ,ADC_TRIGGER_TIMER);
+	volatile Adc_ValueGroupType G0_ResultBuffer[6] ,G1_ResultBuffer[2] ; 
+	volatile Adc_ValueGroupType G0_appBuffer[2] , G1_appBuffer[1]; 
+	if(Adc_SetupResultBuffer(0,G0_ResultBuffer)!=E_OK){	}
+	if(Adc_SetupResultBuffer(1,G1_ResultBuffer)!=E_OK){	}
+	// volatile Adc_ValueGroupType** PtrToSamplePtr;
 	
-	GPIO_initPin(PORTF,PIN1,DIGITAL,OUTPUT);
-	GPIO_initPin(PORTF,PIN2,DIGITAL,OUTPUT);
-	GPIO_initPin(PORTF,PIN0,DIGITAL,INPUT);
-	//GPIO_initInterruptAdc(PORTF,PIN0,FALLING);
-	
-	//UART_init(UART1,9600);
-	
-	volatile uint32_t x;
-	Adc_SetupResultBuffer(ADC0,&x);
-	
-	volatile int y ;
 	while(1)
 	{
-		y =x ;
-		//ADC0_PSSI_R = 0x08;
-	//	UART_sendInt(UART1,12);		
-	//UART_sendString(UART1,"yaraab\n");
+		Adc_StartGroupConversion(0);
+		Adc_StartGroupConversion(1);
+
+	//	Adc_GetStreamLastPointer ( 0,  PtrToSamplePtr );
+
+	  if(Adc_ReadGroup(0,G0_appBuffer)!=E_OK){}
+	  if(Adc_ReadGroup(1,G1_appBuffer)!=E_OK){}
+		UART_sendString(UART1,"----------------------- \n");
+		for(int i=0 ; i<2 ; i++)	
+		{
+			UART_sendInt(UART1,G0_appBuffer[i]);
+		}			
+		UART_sendString(UART1,"************ \n");
+		for(int i=0 ; i<1 ; i++)	
+		{
+			UART_sendInt(UART1,G1_appBuffer[i]);
+		}		
 	}
 }
 
